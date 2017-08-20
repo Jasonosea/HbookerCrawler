@@ -31,7 +31,7 @@ headers_chapter_detail = [('Accept', 'application/json, text/javascript, */*; q=
                           ('Pragma', 'no-cache'),
                           ('Referer', 'http://www.hbooker.com/chapter/book_chapter_detail/100287294/music'),
                           ('X-Requested-With', 'XMLHttpRequest')]
-myEncrytExtend = execjs.compile(open("myEncrytExtend-min.js").read())
+myEncrytExtend = execjs.compile(open("myEncrytExtend-min_re.js").read())
 
 
 def make_cookie(name, value):
@@ -51,6 +51,13 @@ def str_mid(string, left, right, start=None, end=None):
     return None
 
 
+file_data = str(open('chapter_detail.json').read())
+chapter_content = str_mid(file_data, '"chapter_content":"', '"')
+encryt_keys = str_mid(file_data, '"encryt_keys":', ',')
+chapter_access_key = str_mid(file_data, '"chapter_access_key":"', '"')
+
+print(myEncrytExtend.call('myDecrypt', {'content': chapter_content, 'keys': encryt_keys, 'accessKey': chapter_access_key}))
+
 print("请先登录你的欢乐书客帐号，之后得到一些Cookie并输入程序。")
 
 # while True:
@@ -66,8 +73,7 @@ print("请先登录你的欢乐书客帐号，之后得到一些Cookie并输入�
 #     if reader_id:
 #         break
 # user_id = input("Cookie: user_id=(为空则与 reader_id 相同)") or reader_id
-# ci_session = "htdj3ujfr06421b9dnpbj2incfacebeh"
-login_token = ""
+login_token = "0b0d5d817af765d3515ac1912a0921e9	"
 reader_id = "1587745"
 user_id = "1587745"
 
@@ -85,9 +91,6 @@ opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
 opener.addheaders = headers_default
 print("正在获取书架信息...")
 bookshelf_str = bytes(opener.open("http://www.hbooker.com/bookshelf/my_book_shelf/").read()).decode()
-for item in cj:
-    if item.name == 'ci_session':
-        cj.set_cookie(make_cookie('ci_session', item.value))
 nickname = str_mid(bookshelf_str, '<span class="J_Nickname">', '</span>')
 if nickname:
     print("你的昵称: " + nickname)
@@ -112,9 +115,6 @@ if nickname:
         print("正在获取书籍信息...")
         opener.addheaders = headers_default
         book_chapter_str = bytes(opener.open("http://www.hbooker.com/book/" + book_id).read()).decode()
-        for item in cj:
-            if item.name == 'ci_session':
-                cj.set_cookie(make_cookie('ci_session', item.value))
         book_chapter = []
         book_chapter_index = 0
         for str_ in re.findall('<li><a target="_blank"[\S\s]+?</a>',
@@ -145,9 +145,6 @@ if nickname:
             ajax_get_session_code_str = bytes(opener.open(
                 "http://www.hbooker.com/chapter/ajax_get_session_code", postData
             ).read()).decode('unicode_escape')
-            for item in cj:
-                if item.name == 'ci_session':
-                    cj.set_cookie(make_cookie('ci_session', item.value))
             code = str_mid(ajax_get_session_code_str, '"code":', ',')
             chapter_access_key = str_mid(ajax_get_session_code_str, '"chapter_access_key":"', '"')
             if code == "100000":
@@ -157,9 +154,6 @@ if nickname:
                 get_book_chapter_detail_info_str = bytes(opener.open(
                     "http://www.hbooker.com/chapter/get_book_chapter_detail_info", postData
                 ).read()).decode('unicode_escape')
-                for item in cj:
-                    if item.name == 'ci_session':
-                        cj.set_cookie(make_cookie('ci_session', item.value))
                 code = str_mid(get_book_chapter_detail_info_str, '"code":', ',')
                 if code == "100000":
                     print(get_book_chapter_detail_info_str)
@@ -174,11 +168,11 @@ if nickname:
                     cnt_success += 1
                 else:
                     tip = str_mid(get_book_chapter_detail_info_str, '"tip":"', '"')
-                    print("[INFO]code:", code, "tip:", tip)
+                    print("[INFO]", "code:", code, "tip:", tip)
                     cnt_fail += 1
             else:
                 tip = str_mid(ajax_get_session_code_str, '"tip":"', '"')
-                print("[INFO]code:", code, "tip:", tip)
+                print("[INFO]", "code:", code, "tip:", tip)
                 cnt_fail += 1
         print("小说下载已完成，下载成功", cnt_success, "章，下载失败", cnt_fail, "章")
 else:
