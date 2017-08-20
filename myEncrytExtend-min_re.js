@@ -106,8 +106,9 @@ function myDecrypt(f){
 			var o=q.split("");
 			var m=o.length;
 			var k=new Array();
-			k.push(r[(o[m-1].charCodeAt(0))%t]);
-			k.push(r[(o[0].charCodeAt(0))%t]);
+			k.push(r[(o[m-1].charCodeAt(0))%t]);//57%8=1
+			k.push(r[(o[0].charCodeAt(0))%t]);//109%8=1
+			//["0n+Eu27ZoqtT2PguBbgHgBDGnLbq0QCybnKpzzf+Xos=","0n+Eu27ZoqtT2PguBbgHgBDGnLbq0QCybnKpzzf+Xos="]
 			for(i=0;i<k.length;i++){
 				n=base64_decode(n);
 				var p=k[i];
