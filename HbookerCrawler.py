@@ -1,7 +1,7 @@
 import urllib.request
 import http.cookiejar
 import re
-import execjs
+import myEncrypt
 
 headers_default = [('Accept', 'text/html, application/xhtml+xml, application/xml; q=0.9, image/webp, */*; q=0.8'),
                    ('Accept-Encoding', 'deflate'),
@@ -31,7 +31,6 @@ headers_chapter_detail = [('Accept', 'application/json, text/javascript, */*; q=
                           ('Pragma', 'no-cache'),
                           ('Referer', 'http://www.hbooker.com/chapter/book_chapter_detail/100287294/music'),
                           ('X-Requested-With', 'XMLHttpRequest')]
-myEncrytExtend = execjs.compile(open("myEncrytExtend-min_re.js").read())
 
 
 def make_cookie(name, value):
@@ -56,7 +55,6 @@ chapter_content = str_mid(file_data, '"chapter_content":"', '"')
 encryt_keys = str_mid(file_data, '"encryt_keys":', ',')
 chapter_access_key = str_mid(file_data, '"chapter_access_key":"', '"')
 
-print(myEncrytExtend.call('myDecrypt', {'content': chapter_content, 'keys': encryt_keys, 'accessKey': chapter_access_key}))
 
 print("请先登录你的欢乐书客帐号，之后得到一些Cookie并输入程序。")
 
@@ -73,7 +71,7 @@ print("请先登录你的欢乐书客帐号，之后得到一些Cookie并输入�
 #     if reader_id:
 #         break
 # user_id = input("Cookie: user_id=(为空则与 reader_id 相同)") or reader_id
-login_token = "0b0d5d817af765d3515ac1912a0921e9	"
+login_token = "0b0d5d817af765d3515ac1912a0921e9"
 reader_id = "1587745"
 user_id = "1587745"
 
@@ -161,10 +159,8 @@ if nickname:
                     rad = book_chapter[chapter_index][1] + "100000" + rad
                     encryt_keys = str_mid(get_book_chapter_detail_info_str, '"encryt_keys":', ',')
                     chapter_content = str_mid(get_book_chapter_detail_info_str, '"chapter_content":"', '"')
+                    # myEncrypt
 
-                    print(myEncrytExtend.call('myDecrypt', '{"content":"' + chapter_content + '",' +
-                                              '"keys":' + encryt_keys + ',' +
-                                              '"accessKey":"' + chapter_access_key + '"}'))
                     cnt_success += 1
                 else:
                     tip = str_mid(get_book_chapter_detail_info_str, '"tip":"', '"')
