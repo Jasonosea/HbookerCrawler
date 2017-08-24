@@ -3,6 +3,7 @@ import http.cookiejar
 import re
 import os
 import execjs
+import codecs
 
 
 headers_default = [('Accept', 'text/html, application/xhtml+xml, application/xml; q=0.9, image/webp, */*; q=0.8'),
@@ -43,7 +44,7 @@ def make_cookie(name, value):
     )
 
 
-def str_mid(string, left, right, start=None, end=None):
+def str_mid(string: str, left: str, right: str, start=None, end=None):
     pos1 = string.find(left, start, end)
     if pos1 > -1:
         pos2 = string.find(right, pos1 + len(left), end)
@@ -62,6 +63,7 @@ def decrypt(_chapter_content, _encryt_keys, _chapter_access_key):
     return ret
 
 
+
 print("请先登录你的欢乐书客帐号，之后得到一些Cookies并输入程序。")
 print("若不登录则直接留空所有Cookies。")
 
@@ -74,9 +76,6 @@ print("若不登录则直接留空所有Cookies。")
 #     if reader_id:
 #         break
 # user_id = input("Cookie: user_id=(为空则与 reader_id 相同)") or reader_id
-# login_token = "0b0d5d817af765d3515ac1912a0921e9"
-# reader_id = "1587745"
-# user_id = "1587745"
 login_token = ""
 reader_id = ""
 user_id = ""
@@ -88,6 +87,40 @@ cj.set_cookie(make_cookie("reader_id", reader_id))
 cj.set_cookie(make_cookie("user_id", user_id))
 
 opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+
+
+def get_content(_chapter_id: str):
+    _content = '$$$[章节链接:http://www.hbooker.com/chapter/' + _chapter_id + ']$$$'
+    opener.addheaders = headers_chapter_session_code
+    post_data = str('chapter_id=' + _chapter_id).encode()
+    ajax_get_session_code_str = bytes(opener.open(
+        "http://www.hbooker.com/chapter/ajax_get_session_code", post_data
+    ).read()).decode('unicode_escape')
+    code = str_mid(ajax_get_session_code_str, '"code":', ',')
+    chapter_access_key = str_mid(ajax_get_session_code_str, '"chapter_access_key":"', '"')
+    if code == "100000":
+        opener.addheaders = headers_chapter_detail
+        post_data = str('chapter_id=' + _chapter_id +
+                        '&chapter_access_key=' + chapter_access_key).encode()
+        get_book_chapter_detail_info_str = bytes(opener.open(
+            "http://www.hbooker.com/chapter/get_book_chapter_detail_info", post_data
+        ).read()).decode('unicode_escape')
+        code = str_mid(get_book_chapter_detail_info_str, '"code":', ',')
+        if code == "100000":
+            encryt_keys = str_mid(get_book_chapter_detail_info_str, '"encryt_keys":[', ']')
+            chapter_content = str_mid(get_book_chapter_detail_info_str, '"chapter_content":"', '"')
+            encryt_keys = encryt_keys.replace('"', '').replace('\\', '')
+            chapter_content = chapter_content.replace('\\', '')
+            _content = decrypt(chapter_content, encryt_keys, chapter_access_key)
+            _content.replace('\n', '\n\n')
+        else:
+            tip = str_mid(get_book_chapter_detail_info_str, '"tip":"', '"')
+            print("[ERROR]", "code:", code, "tip:", tip)
+    else:
+        tip = str_mid(ajax_get_session_code_str, '"tip":"', '"')
+        print("[ERROR]", "code:", code, "tip:", tip)
+    return '\n' + _content + '\n'
+
 
 opener.addheaders = headers_default
 bookshelf_str = ''
@@ -131,10 +164,12 @@ if nickname or nickname == '${NoName}':
                     break
         if book_id[0] == 'q':
             break
-        # 获取书籍信息
         print("正在获取书籍信息...")
         opener.addheaders = headers_default
         book_chapter_str = bytes(opener.open("http://www.hbooker.com/book/" + book_id).read()).decode()
+        book_title_str = str_mid(book_chapter_str, '<div class="book-title">', '</div>')
+        book_title = str_mid(book_title_str, '<h1>', '</h1>')
+        book_author = str_mid(book_title_str, 'target="_blank" class="">', '</a>')
         book_chapter = []
         book_chapter_index = 0
         for str_ in re.findall('<li><a target="_blank"[\S\s]+?</a>',
@@ -145,51 +180,61 @@ if nickname or nickname == '${NoName}':
                                  str_mid(str_, '</i>', '</a>'))
             book_chapter.append(book_chapter_info)
         print("共", book_chapter_index, "章", "最新章节:", str_mid(book_chapter_str, '<div class="tit">', '</div>'))
-        while True:
-            chapter_start = input("输入开始章节:")
-            if chapter_start and int(chapter_start) > 0:
-                break
-        while True:
-            chapter_end = input("输入结束章节:")
-            if chapter_end and int(chapter_end) >= int(chapter_start):
-                break
-        print("正在获取书籍内容...")
-        opener.addheaders = headers_chapter_session_code
+        print("正在检查文件...")#100012892
+        if not os.path.isdir(os.getcwd() + "\\..\\books"):
+            os.mkdir(os.getcwd() + "\\..\\books")
+        fixed_chapter = list()
+        file_data = ''
         cnt_success = 0
         cnt_fail = 0
-        for chapter_index in range(int(chapter_start) - 1, int(chapter_end)):
-            print("当前章节", book_chapter[chapter_index][0], ":",
-                  "chapter_id:", book_chapter[chapter_index][1],
-                  "标题:", book_chapter[chapter_index][2])
-            postData = str('chapter_id=' + book_chapter[chapter_index][1]).encode()
-            ajax_get_session_code_str = bytes(opener.open(
-                "http://www.hbooker.com/chapter/ajax_get_session_code", postData
-            ).read()).decode('unicode_escape')
-            code = str_mid(ajax_get_session_code_str, '"code":', ',')
-            chapter_access_key = str_mid(ajax_get_session_code_str, '"chapter_access_key":"', '"')
-            if code == "100000":
-                opener.addheaders = headers_chapter_detail
-                postData = str('chapter_id=' + book_chapter[chapter_index][1] +
-                               '&chapter_access_key=' + chapter_access_key).encode()
-                get_book_chapter_detail_info_str = bytes(opener.open(
-                    "http://www.hbooker.com/chapter/get_book_chapter_detail_info", postData
-                ).read()).decode('unicode_escape')
-                code = str_mid(get_book_chapter_detail_info_str, '"code":', ',')
-                if code == "100000":
-                    print(get_book_chapter_detail_info_str)
-                    encryt_keys = str_mid(get_book_chapter_detail_info_str, '"encryt_keys":', ',')
-                    chapter_content = str_mid(get_book_chapter_detail_info_str, '"chapter_content":"', '"')
-                    content = decrypt(chapter_content, encryt_keys, chapter_access_key)
-
-                    cnt_success += 1
-                else:
-                    tip = str_mid(get_book_chapter_detail_info_str, '"tip":"', '"')
-                    print("[ERROR]", "code:", code, "tip:", tip)
-                    cnt_fail += 1
+        if os.path.isfile(os.getcwd() + "\\..\\books\\" + book_title + ".txt"):
+            file = codecs.open(os.getcwd() + "\\..\\books\\" + book_title + ".txt", 'r+', 'utf-8')
+            file_data = file.read()
+            for line in file:
+                print(line)
+                if line[0:3] == '$$$':
+                    chapter_id = str_mid(line, '$$$[章节链接:http://www.hbooker.com/chapter/', ']$$$')
+                    print("尝试修复章节:", "chapter_id:", chapter_id)
+                    before_str = '\n$$$[章节链接:http://www.hbooker.com/chapter/' + chapter_id + ']$$$\n'
+                    content = get_content(chapter_id)
+                    fixed_chapter.append((before_str, content))
+                    if content.find('$$$') == -1:
+                        cnt_success += 1
+                    else:
+                        cnt_fail += 1
+            file.close()
+        file = codecs.open(os.getcwd() + "\\..\\books\\" + book_title + ".txt", 'w+', 'utf-8')
+        for fix in fixed_chapter:
+            file_data.replace(fix[0], fix[1])
+        file.write(file_data)
+        file.flush()
+        del file_data
+        if len(fixed_chapter):
+            print("章节修复完成，修复成功", cnt_success, "章，修复失败", cnt_fail, "章")
+        print("正在获取书籍内容...")
+        chapter_start = input("输入开始章节:") or 0
+        chapter_end = input("输入结束章节:") or book_chapter_index
+        if chapter_start == 0:
+            if file_data.rfind('No.') > -1:
+                chapter_start = str_mid(file_data, 'No.', ' ', file_data.rfind('No.'))
             else:
-                tip = str_mid(ajax_get_session_code_str, '"tip":"', '"')
-                print("[ERROR]", "code:", code, "tip:", tip)
+                
+        print(chapter_start, chapter_end)
+        for chapter_index in range(int(chapter_start) - 1, int(chapter_end)):
+            chapter_id = book_chapter[chapter_index][1]
+            title = book_chapter[chapter_index][2]
+            print("当前章节", book_chapter[chapter_index][0], ":",
+                  "chapter_id:", chapter_id,
+                  "标题:", title)
+            content = get_content(chapter_id)
+            if content.find('$$$') == -1:
+                cnt_success += 1
+            else:
                 cnt_fail += 1
+            chapter_data = '\nNo.' + str(chapter_index + 1) + ': ' + title + '\n' + content
+            file.write(chapter_data)
+            file.flush()
+        file.close()
         print("小说下载已完成，下载成功", cnt_success, "章，下载失败", cnt_fail, "章")
 else:
     print("获取书架信息失败")

@@ -2,12 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="aff372b8-6493-4ad8-92e2-ef32ef4638b3" name="Default" comment="">
-      <change type="DELETED" beforePath="$PROJECT_DIR$/book-read-min.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/chapter_detail.json" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/myEncrypt.py" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/myEncrytExtend-min.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/myEncrytExtend-min_re.js" afterPath="" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Decrypt.js" afterPath="$PROJECT_DIR$/Decrypt.js" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/HbookerCrawler.py" afterPath="$PROJECT_DIR$/HbookerCrawler.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -22,8 +18,8 @@
       <file leaf-file-name="HbookerCrawler.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/HbookerCrawler.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="280">
-              <caret line="182" column="0" lean-forward="true" selection-start-line="182" selection-start-column="0" selection-end-line="182" selection-end-column="0" />
+            <state relative-caret-position="427">
+              <caret line="220" column="16" lean-forward="true" selection-start-line="220" selection-start-column="16" selection-end-line="220" selection-end-column="16" />
               <folding>
                 <element signature="e#0#21#0" expanded="true" />
               </folding>
@@ -66,7 +62,7 @@
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="6">
+  <component name="ProjectFrameBounds" extendedState="7">
     <option name="x" value="100" />
     <option name="y" value="20" />
     <option name="width" value="1400" />
@@ -196,7 +192,7 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-8" y="-8" width="1616" height="876" extended-state="6" />
+    <frame x="-8" y="-8" width="1616" height="876" extended-state="7" />
     <editor active="true" />
     <layout>
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.20308483" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
@@ -317,7 +313,6 @@
       </provider>
     </entry>
     <entry file="file://C:/Program Files/Python36/Lib/re.py" />
-    <entry file="file://$USER_HOME$/.PyCharmCE2017.2/system/python_stubs/-1120166012/builtins.py" />
     <entry file="file://C:/Program Files/Python36/Lib/urllib/request.py" />
     <entry file="file://C:/Program Files/Python36/Lib/gzip.py" />
     <entry file="file://$PROJECT_DIR$/jquery.js" />
@@ -373,10 +368,18 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$USER_HOME$/.PyCharmCE2017.2/system/python_stubs/-1120166012/builtins.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="169">
+          <caret line="4927" column="8" lean-forward="false" selection-start-line="4927" selection-start-column="8" selection-end-line="4927" selection-end-column="8" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/HbookerCrawler.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="280">
-          <caret line="182" column="0" lean-forward="true" selection-start-line="182" selection-start-column="0" selection-end-line="182" selection-end-column="0" />
+        <state relative-caret-position="427">
+          <caret line="220" column="16" lean-forward="true" selection-start-line="220" selection-start-column="16" selection-end-line="220" selection-end-column="16" />
           <folding>
             <element signature="e#0#21#0" expanded="true" />
           </folding>
