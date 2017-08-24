@@ -5,7 +5,6 @@ import os
 import execjs
 import codecs
 
-
 headers_default = [('Accept', 'text/html, application/xhtml+xml, application/xml; q=0.9, image/webp, */*; q=0.8'),
                    ('Accept-Encoding', 'deflate'),
                    ('Accept-Language', 'zh-CN, zh; q=0.8'),
@@ -34,6 +33,7 @@ headers_chapter_detail = [('Accept', 'application/json, text/javascript, */*; q=
                           ('Pragma', 'no-cache'),
                           ('Referer', 'http://www.hbooker.com/chapter/book_chapter_detail/100287294/music'),
                           ('X-Requested-With', 'XMLHttpRequest')]
+newline = '\r\n'
 
 
 def make_cookie(name, value):
@@ -62,23 +62,15 @@ def decrypt(_chapter_content, _encryt_keys, _chapter_access_key):
     ret = ret.replace('</p>', '')
     return ret
 
-
-
 print("请先登录你的欢乐书客帐号，之后得到一些Cookies并输入程序。")
 print("若不登录则直接留空所有Cookies。")
 
-# while True:
-#     login_token = input("Cookie: login_token=")
-#     if login_token:
-#         break
-# while True:
-#     reader_id = input("Cookie: reader_id=")
-#     if reader_id:
-#         break
-# user_id = input("Cookie: user_id=(为空则与 reader_id 相同)") or reader_id
-login_token = ""
-reader_id = ""
-user_id = ""
+login_token = input("Cookie: login_token=")
+reader_id = input("Cookie: reader_id=")
+user_id = input("Cookie: user_id=(为空则与 reader_id 相同)") or reader_id
+# login_token = ""
+# reader_id = ""
+# user_id = ""
 
 cj = http.cookiejar.CookieJar()
 
@@ -112,14 +104,14 @@ def get_content(_chapter_id: str):
             encryt_keys = encryt_keys.replace('"', '').replace('\\', '')
             chapter_content = chapter_content.replace('\\', '')
             _content = decrypt(chapter_content, encryt_keys, chapter_access_key)
-            _content.replace('\n', '\n\n')
+            _content = re.sub(r"\r?\n", newline * 2, _content)
         else:
             tip = str_mid(get_book_chapter_detail_info_str, '"tip":"', '"')
             print("[ERROR]", "code:", code, "tip:", tip)
     else:
         tip = str_mid(ajax_get_session_code_str, '"tip":"', '"')
         print("[ERROR]", "code:", code, "tip:", tip)
-    return '\n' + _content + '\n'
+    return newline + _content + newline * 2
 
 
 opener.addheaders = headers_default
@@ -180,7 +172,7 @@ if nickname or nickname == '${NoName}':
                                  str_mid(str_, '</i>', '</a>'))
             book_chapter.append(book_chapter_info)
         print("共", book_chapter_index, "章", "最新章节:", str_mid(book_chapter_str, '<div class="tit">', '</div>'))
-        print("正在检查文件...")#100012892
+        print("正在检查文件...")
         if not os.path.isdir(os.getcwd() + "\\..\\books"):
             os.mkdir(os.getcwd() + "\\..\\books")
         fixed_chapter = list()
@@ -192,10 +184,10 @@ if nickname or nickname == '${NoName}':
             file_data = file.read()
             for line in file:
                 print(line)
-                if line[0:3] == '$$$':
+                if line.startswith('$$$'):
                     chapter_id = str_mid(line, '$$$[章节链接:http://www.hbooker.com/chapter/', ']$$$')
                     print("尝试修复章节:", "chapter_id:", chapter_id)
-                    before_str = '\n$$$[章节链接:http://www.hbooker.com/chapter/' + chapter_id + ']$$$\n'
+                    before_str = newline + '$$$[章节链接:http://www.hbooker.com/chapter/' + chapter_id + ']$$$' + newline
                     content = get_content(chapter_id)
                     fixed_chapter.append((before_str, content))
                     if content.find('$$$') == -1:
@@ -208,17 +200,18 @@ if nickname or nickname == '${NoName}':
             file_data.replace(fix[0], fix[1])
         file.write(file_data)
         file.flush()
-        del file_data
         if len(fixed_chapter):
             print("章节修复完成，修复成功", cnt_success, "章，修复失败", cnt_fail, "章")
-        print("正在获取书籍内容...")
+        print("输入新章节(留空将自动寻找)")
         chapter_start = input("输入开始章节:") or 0
         chapter_end = input("输入结束章节:") or book_chapter_index
         if chapter_start == 0:
             if file_data.rfind('No.') > -1:
-                chapter_start = str_mid(file_data, 'No.', ' ', file_data.rfind('No.'))
+                chapter_start = str_mid(file_data, 'No.', '  ', file_data.rfind('No.'))
             else:
-                
+                chapter_start = 1
+                print("未能识别最新章节，将从第一章开始")
+        print("正在获取书籍内容...")
         print(chapter_start, chapter_end)
         for chapter_index in range(int(chapter_start) - 1, int(chapter_end)):
             chapter_id = book_chapter[chapter_index][1]
@@ -231,7 +224,7 @@ if nickname or nickname == '${NoName}':
                 cnt_success += 1
             else:
                 cnt_fail += 1
-            chapter_data = '\nNo.' + str(chapter_index + 1) + ': ' + title + '\n' + content
+            chapter_data = newline + 'No.' + str(chapter_index + 1) + '  ' + title + newline + content
             file.write(chapter_data)
             file.flush()
         file.close()
