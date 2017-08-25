@@ -161,7 +161,7 @@ if nickname or nickname == '${NoName}':
                 try:
                     if 0 < int(book_id) <= book_index:
                         book_id = bookshelf[int(book_id) - 1][1]
-                        break
+                    break
                 except ValueError:
                     pass
         else:
