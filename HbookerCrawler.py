@@ -6,8 +6,13 @@ import execjs
 import codecs
 
 print("当前JavaScript环境:", execjs.get().name)
-print("请确保环境为Node.js")
-
+if str(execjs.get().name).lower().find('node.js') == -1:
+    while True:
+        run = str(input("检测到当前JavaScript环境不是Node.js，是否继续运行？(y/n)")).lower()
+        if run.startswith('y'):
+            break
+        elif run.startswith('n'):
+            exit()
 
 headers_default = [('Accept', 'text/html, application/xhtml+xml, application/xml; q=0.9, image/webp, */*; q=0.8'),
                    ('Accept-Encoding', 'deflate'),
