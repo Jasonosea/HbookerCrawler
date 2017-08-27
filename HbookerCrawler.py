@@ -5,35 +5,34 @@ import os
 import execjs
 import codecs
 
+print("当前JavaScript环境:", execjs.get().name)
+print("请确保环境为Node.js")
+
+
 headers_default = [('Accept', 'text/html, application/xhtml+xml, application/xml; q=0.9, image/webp, */*; q=0.8'),
                    ('Accept-Encoding', 'deflate'),
                    ('Accept-Language', 'zh-CN, zh; q=0.8'),
-                   ('Connection', 'keep-alive'),
                    ('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8'),
                    ('Host', 'www.hbooker.com')]
 headers_chapter_session_code = [('Accept', 'application/json, text/javascript, */*; q=0.01'),
                                 ('Accept-Encoding', 'deflate'),
                                 ('Accept-Language', 'zh-CN, zh; q=0.8'),
-                                ('Connection', 'keep-alive'),
                                 ('Content-Length', '20'),
                                 ('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8'),
                                 ('Host', 'www.hbooker.com'),
                                 ('Origin', 'http://www.hbooker.com'),
-                                ('Pragma', 'no-cache'),
-                                ('Referer', 'http://www.hbooker.com/chapter/book_chapter_detail/100287294/music'),
+                                ('Referer', 'http://www.hbooker.com/chapter/book_chapter_detail'),
                                 ('X-Requested-With', 'XMLHttpRequest')]
 headers_chapter_detail = [('Accept', 'application/json, text/javascript, */*; q=0.01'),
                           ('Accept-Encoding', 'deflate'),
                           ('Accept-Language', 'zh-CN, zh; q=0.8'),
-                          ('Connection', 'keep-alive'),
                           ('Content-Length', '48'),
                           ('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8'),
                           ('Host', 'www.hbooker.com'),
                           ('Origin', 'http://www.hbooker.com'),
-                          ('Pragma', 'no-cache'),
-                          ('Referer', 'http://www.hbooker.com/chapter/book_chapter_detail/100287294/music'),
+                          ('Referer', 'http://www.hbooker.com/chapter/book_chapter_detail'),
                           ('X-Requested-With', 'XMLHttpRequest')]
-newline = '\r\n'
+nl = '\r\n'
 
 
 def make_cookie(name, value):
@@ -73,21 +72,19 @@ if not os.path.isdir(os.getcwd() + "\\..\\books"):
     os.mkdir(os.getcwd() + "\\..\\books")
 if os.path.isfile(os.getcwd() + "\\..\\books\\hbookercrawler.cfg"):
     cfg_file = codecs.open(os.getcwd() + "\\..\\books\\hbookercrawler.cfg", 'r', 'utf-8')
-    cfg_file_line = cfg_file.readlines()
-    cfg_file.close()
-    for line in cfg_file_line:
+    for line in cfg_file.readlines():
         if line.startswith("login_token="):
             login_token = str_mid(line, 'login_token="', '"')
         elif line.startswith("reader_id="):
             reader_id = str_mid(line, 'reader_id="', '"')
-    del cfg_file_line
+    cfg_file.close()
 
 login_token = input('Cookie: login_token(默认为"' + login_token + '")=') or login_token
 reader_id = input('Cookie: reader_id(默认为"' + reader_id + '")=') or reader_id
 
 cfg_file = codecs.open(os.getcwd() + "\\..\\books\\hbookercrawler.cfg", 'w', 'utf-8')
-cfg_file.write('login_token="' + login_token + '"' + newline)
-cfg_file.write('reader_id="' + reader_id + '"' + newline)
+cfg_file.write('login_token="' + login_token + '"' + nl)
+cfg_file.write('reader_id="' + reader_id + '"' + nl)
 cfg_file.close()
 del cfg_file
 
@@ -122,18 +119,18 @@ def get_content(_chapter_id: str):
                 encryt_keys = str_mid(get_book_chapter_detail_info_str, '"encryt_keys":[', ']')
                 chapter_content = str_mid(get_book_chapter_detail_info_str, '"chapter_content":"', '"')
                 _content = decrypt(chapter_content, encryt_keys, chapter_access_key)
-                _content = re.sub(r"[\r\n|\r|\n]", newline * 2, _content)
+                _content = re.sub(r"\r\n|\r|\n", nl * 2, _content)
             else:
                 tip = str_mid(get_book_chapter_detail_info_str, '"tip":"', '"')
-                print("[ERROR]", "code:", code, "tip:", tip)
+                print("[INFO]", "code:", code, "tip:", tip)
         else:
             tip = str_mid(ajax_get_session_code_str, '"tip":"', '"')
-            print("[ERROR]", "code:", code, "tip:", tip)
+            print("[INFO]", "code:", code, "tip:", tip)
     except Exception as _e:
-        print(_e)
+        print("[ERROR]", _e)
         print("获取章节内容时出错")
     finally:
-        return newline + _content + newline * 2
+        return nl + _content + nl * 2
 
 
 bookshelf_str = ''
@@ -143,7 +140,7 @@ if login_token and reader_id:
         bookshelf_str = bytes(opener.open("http://www.hbooker.com/bookshelf/my_book_shelf/").read()).decode()
         nickname = str_mid(bookshelf_str, '<span class="J_Nickname">', '</span>')
     except Exception as e:
-        print(e)
+        print("[ERROR]", e)
         print("获取书架信息时出错，取消登录")
         nickname = '${NoName}'
 else:
@@ -162,7 +159,7 @@ if nickname:
                              str_mid(str_, 'target="_blank">', '</a>'))
                 bookshelf.append(book_info)
         except Exception as e:
-            print(e)
+            print("[ERROR]", e)
             print("获取书架信息时出错，取消登录")
             nickname = '${NoName}'
     while True:
@@ -207,7 +204,7 @@ if nickname:
                 book_chapter.append(book_chapter_info)
             print("共", book_chapter_index, "章", "最新章节:", str_mid(book_chapter_str, '<div class="tit">', '</div>'))
         except Exception as e:
-            print(e)
+            print("[ERROR]", e)
             print("获取书籍信息时出错")
             continue
         try:
@@ -219,14 +216,14 @@ if nickname:
             if not os.path.isdir(os.getcwd() + "\\..\\books"):
                 os.mkdir(os.getcwd() + "\\..\\books")
             if os.path.isfile(os.getcwd() + "\\..\\books\\" + book_title + ".txt"):
-                file = codecs.open(os.getcwd() + "\\..\\books\\" + book_title + ".txt", 'r+', 'utf-8')
+                file = codecs.open(os.getcwd() + "\\..\\books\\" + book_title + ".txt", 'r', 'utf-8')
                 file_data = file.read()
-                for line in file:
-                    print(line)
+                file.seek(0)
+                for line in file.readlines():
                     if line.startswith('$$$'):
                         chapter_id = str_mid(line, '$$$[章节链接:http://www.hbooker.com/chapter/', ']$$$')
                         print("尝试修复章节:", "chapter_id:", chapter_id)
-                        before_str = newline + '$$$[章节链接:http://www.hbooker.com/chapter/' + chapter_id + ']$$$' + newline
+                        before_str = nl + '$$$[章节链接:http://www.hbooker.com/chapter/' + chapter_id + ']$$$' + nl
                         content = get_content(chapter_id)
                         fixed_chapter.append((before_str, content))
                         if content.find('$$$') == -1:
@@ -234,7 +231,7 @@ if nickname:
                         else:
                             cnt_fail += 1
                 file.close()
-            file = codecs.open(os.getcwd() + "\\..\\books\\" + book_title + ".txt", 'w+', 'utf-8')
+            file = codecs.open(os.getcwd() + "\\..\\books\\" + book_title + ".txt", 'w', 'utf-8')
             for fix in fixed_chapter:
                 file_data.replace(fix[0], fix[1])
             file.write(file_data)
@@ -242,7 +239,7 @@ if nickname:
             if len(fixed_chapter):
                 print("章节修复完成，修复成功", cnt_success, "章，修复失败", cnt_fail, "章")
         except Exception as e:
-            print(e)
+            print("[ERROR]", e)
             print("检查文件时出错")
             continue
         try:
@@ -253,6 +250,10 @@ if nickname:
                     if file_data.rfind('No.') > -1:
                         try:
                             chapter_start = int(str_mid(file_data, 'No.', '  ', file_data.rfind('No.'))) + 1
+                            if int(chapter_start) > int(chapter_end):
+                                confirm = 'q'
+                                print("书籍暂无更新")
+                                break
                         except ValueError:
                             chapter_start = 1
                             print("未能识别最新章节编号，将从章节编号1开始")
@@ -264,19 +265,21 @@ if nickname:
                         print("开始章节编号:", book_chapter[int(chapter_start) - 1][0],
                               "chapter_id:", book_chapter[int(chapter_start) - 1][1],
                               "标题:", book_chapter[int(chapter_start) - 1][2])
-                        print("结束章节编号:", book_chapter[int(chapter_start) - 1][0],
+                        print("结束章节编号:", book_chapter[int(chapter_end) - 1][0],
                               "chapter_id:", book_chapter[int(chapter_end) - 1][1],
                               "标题:", book_chapter[int(chapter_end) - 1][2])
                         while True:
-                            confirm = input("确定从这个位置下载吗(y/n):")
-                            if confirm.lower().startswith('y') or confirm.lower().startswith('n'):
+                            confirm = input("确定从这个位置下载吗(y/n/q):")
+                            if confirm.lower().startswith('y') or confirm.lower().startswith('n') or confirm.lower().startswith('q'):
                                 break
-                        if confirm.lower().startswith('y'):
+                        if confirm.lower().startswith('y') or confirm.lower().startswith('q'):
                             break
                 except ValueError:
                     continue
+            if confirm.lower().startswith('q'):
+                continue
         except Exception as e:
-            print(e)
+            print("[ERROR]", e)
             print("读取章节编号时出错")
             continue
         try:
@@ -292,13 +295,13 @@ if nickname:
                     cnt_success += 1
                 else:
                     cnt_fail += 1
-                chapter_data = newline + 'No.' + str(chapter_index + 1) + '  ' + title + newline + content
+                chapter_data = nl + 'No.' + str(chapter_index + 1) + '  ' + title + nl + content
                 file.write(chapter_data)
                 file.flush()
             file.close()
             print("小说下载已完成，下载成功", cnt_success, "章，下载失败", cnt_fail, "章")
         except Exception as e:
-            print(e)
+            print("[ERROR]", e)
             print("下载书籍时出错")
 else:
     print("获取书架信息失败")
