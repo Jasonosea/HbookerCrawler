@@ -275,6 +275,9 @@ if nickname:
                             cnt_success += 1
                             print("修复成功")
                     file_data += file_lines[i]
+                file.seek(0)
+                file.writelines(file_lines)
+                file.flush()
                 if cnt_success or cnt_fail:
                     print("章节修复完成，修复成功", cnt_success, "章，修复失败", cnt_fail, "章")
             else:
@@ -300,9 +303,9 @@ if nickname:
                                     chapter_start = int(str_mid(line, '<div id="', '"')) + 1
                             except ValueError:
                                 continue
-                    if chapter_start > chapter_end:
+                    if chapter_start > book_chapter_index:
                         confirm = 'q'
-                        input("书籍暂无更新")
+                        input("书籍暂无更新...")
                         break
                 if chapter_start == 0:
                     chapter_start = 1
@@ -320,7 +323,10 @@ if nickname:
                             break
                     if confirm.startswith('y') or confirm.startswith('q'):
                         break
+                else:
+                    print("输入无效:", "开始章节编号", chapter_start, "大于", "结束章节编号", chapter_end)
             if confirm.startswith('q'):
+                file.close()
                 continue
         except Exception as e:
             print("[ERROR]", e)
@@ -328,6 +334,8 @@ if nickname:
             continue
         try:
             print("正在下载书籍内容...")
+            if file_data.find(html_head) == -1:
+                file_data = html_head + file_data
             file_data = file_data.replace(html_end, '')
             file.seek(0)
             file.write(file_data)
