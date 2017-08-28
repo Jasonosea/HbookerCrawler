@@ -63,18 +63,17 @@ Decrypt_js = execjs.compile(open(os.getcwd() + '/Decrypt.js').read())
 def decrypt(_chapter_content: str, _encryt_keys: str, _chapter_access_key: str):
     _encryt_keys = _encryt_keys.replace('"', '').replace('\\', '')
     _chapter_content = _chapter_content.replace('\\', '')
-    ret = str(Decrypt_js.call('decrypt', _chapter_content, _encryt_keys, _chapter_access_key))
-    ret = ret.replace("<p class='chapter'>", '')
-    ret = ret.replace('</p>', '')
-    return ret
+    return str(Decrypt_js.call('decrypt', _chapter_content, _encryt_keys, _chapter_access_key))
 
+print("下载的书籍文件在/../books目录下。")
+print("书籍文件有html和txt格式，使用html格式可加载图片，但确保images文件夹存在。")
 print("请先登录你的欢乐书客帐号，之后得到一些Cookies并输入程序。")
 print("若不登录则直接留空所有Cookies。")
 
 login_token = ""
 reader_id = ""
 if not os.path.isdir(os.getcwd() + "\\..\\books"):
-    os.mkdir(os.getcwd() + "\\..\\books")
+    os.makedirs(os.getcwd() + "\\..\\books")
 if os.path.isfile(os.getcwd() + "\\..\\books\\hbookercrawler.cfg"):
     cfg_file = codecs.open(os.getcwd() + "\\..\\books\\hbookercrawler.cfg", 'r', 'utf-8')
     for line in cfg_file.readlines():
@@ -100,23 +99,27 @@ cj.set_cookie(make_cookie("reader_id", reader_id))
 cj.set_cookie(make_cookie("user_id", reader_id))
 
 opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+opener_chapter_session_code = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+opener_chapter_detail = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+
+opener.addheaders = headers_default
+opener_chapter_session_code.addheaders = headers_chapter_session_code
+opener_chapter_detail.addheaders = headers_chapter_detail
 
 
 def get_content(_chapter_id: str):
-    _content = '$$$[章节链接:http://www.hbooker.com/chapter/' + _chapter_id + ']$$$'
+    _content = '<a href="http://www.hbooker.com/chapter/' + _chapter_id + '">章节链接</a>'
     try:
-        opener.addheaders = headers_chapter_session_code
         post_data = str('chapter_id=' + _chapter_id).encode()
-        ajax_get_session_code_str = bytes(opener.open(
+        ajax_get_session_code_str = bytes(opener_chapter_session_code.open(
             "http://www.hbooker.com/chapter/ajax_get_session_code", post_data
         ).read()).decode('unicode_escape')
         code = str_mid(ajax_get_session_code_str, '"code":', ',')
         chapter_access_key = str_mid(ajax_get_session_code_str, '"chapter_access_key":"', '"')
         if code == "100000":
-            opener.addheaders = headers_chapter_detail
             post_data = str('chapter_id=' + _chapter_id +
                             '&chapter_access_key=' + chapter_access_key).encode()
-            get_book_chapter_detail_info_str = bytes(opener.open(
+            get_book_chapter_detail_info_str = bytes(opener_chapter_detail.open(
                 "http://www.hbooker.com/chapter/get_book_chapter_detail_info", post_data
             ).read()).decode('unicode_escape')
             code = str_mid(get_book_chapter_detail_info_str, '"code":', ',')
@@ -124,7 +127,7 @@ def get_content(_chapter_id: str):
                 encryt_keys = str_mid(get_book_chapter_detail_info_str, '"encryt_keys":[', ']')
                 chapter_content = str_mid(get_book_chapter_detail_info_str, '"chapter_content":"', '"')
                 _content = decrypt(chapter_content, encryt_keys, chapter_access_key)
-                _content = re.sub(r"\r\n|\r|\n", nl * 2, _content)
+                _content = re.sub("<p.+?>", '<p>', _content)
             else:
                 tip = str_mid(get_book_chapter_detail_info_str, '"tip":"', '"')
                 print("[INFO]", "code:", code, "tip:", tip)
@@ -135,8 +138,37 @@ def get_content(_chapter_id: str):
         print("[ERROR]", _e)
         print("获取章节内容时出错")
     finally:
-        return nl + _content + nl * 2
+        return _content
 
+
+def download_image(_content: str, _book_dir: str):
+    if not os.path.isdir(_book_dir + '\\images'):
+        os.makedirs(_book_dir + '\\images')
+    for img in re.findall(r'<img src=.*?>', _content):
+        try:
+            src = str_mid(img, '<img src="', '"')
+            if src.rfind('/') == -1:
+                continue
+            filename = src[src.rfind('/') + 1:]
+            urllib.request.urlretrieve(src, _book_dir + '\\images\\' + filename)
+            _content = _content.replace(src, 'images/' + filename)
+        except Exception as _e:
+            print("[ERROR]", _e)
+            print("下载图片时出错")
+    return _content
+
+
+def html2txt(_data: str):
+    for _a in re.findall(r'<a href=.*?>章节链接</a>', _data):
+        _data = _data.replace(_a, '章节链接:' + str_mid(_a, '<a href="', '"'))
+    for _img in re.findall(r'<img src=.*?>', _data):
+        _data = _data.replace(_img, '图片:"' + str_mid(_img, "alt='", "'") + '",' +
+                                    '图片位置:' + str_mid(_img, '<img src="', '"'))
+    _data = re.sub(r'<head>[\s\S]*?</head>', '', _data)
+    _data = re.sub(r'</?(html|head|body|title|div|h|p).*?>', '', _data)
+    _data = re.sub(r'[\r\n]+', nl * 2, _data)
+    _data = _data.replace('<br>', '')
+    return _data
 
 bookshelf_str = ''
 if login_token and reader_id:
@@ -157,7 +189,7 @@ if nickname:
         try:
             print("你的昵称: " + nickname)
             print("书架列表:")
-            for str_ in re.findall('<div class="tit">[\S\s]+?</div>', bookshelf_str):
+            for str_ in re.findall('<div class="tit">.*?</div>', bookshelf_str):
                 book_index += 1
                 book_info = (book_index,
                              str_mid(str_, 'data-book-id="', '"'),
@@ -172,10 +204,10 @@ if nickname:
             for book_info in bookshelf:
                 print("编号:", book_info[0], "id:", book_info[1], "书名:", book_info[2])
             while True:
-                book_id = input("输入书籍编号或id(输入q退出):")
+                book_id = input("输入书籍编号或id(输入q退出):").lower()
                 if not book_id:
                     continue
-                if book_id.lower().startswith('q'):
+                if book_id.startswith('q'):
                     break
                 try:
                     if 0 < int(book_id) <= book_index:
@@ -185,14 +217,13 @@ if nickname:
                     continue
         else:
             while True:
-                book_id = input("输入书籍id(输入q退出):")
+                book_id = input("输入书籍id(输入q退出):").lower()
                 if book_id:
                     break
-        if book_id.lower().startswith('q'):
+        if book_id.startswith('q'):
             break
         try:
             print("正在获取书籍信息...")
-            opener.addheaders = headers_default
             book_chapter_str = bytes(opener.open("http://www.hbooker.com/book/" + book_id).read()).decode()
             book_title_str = str_mid(book_chapter_str, '<div class="book-title">', '</div>')
             book_title = str_mid(book_title_str, '<h1>', '</h1>')
@@ -200,7 +231,7 @@ if nickname:
             print("书名:", book_title, "作者:", book_author)
             book_chapter = list()
             book_chapter_index = 0
-            for str_ in re.findall('<li><a target="_blank"[\S\s]+?</a>',
+            for str_ in re.findall('<li><a target="_blank".*?</a>',
                                    book_chapter_str):
                 book_chapter_index += 1
                 book_chapter_info = (book_chapter_index,
@@ -214,74 +245,82 @@ if nickname:
             continue
         try:
             print("正在检查文件...")
-            fixed_chapter = list()
+            file_lines = list()
             file_data = ''
             cnt_success = 0
             cnt_fail = 0
-            if not os.path.isdir(os.getcwd() + "\\..\\books"):
-                os.mkdir(os.getcwd() + "\\..\\books")
-            if os.path.isfile(os.getcwd() + "\\..\\books\\" + book_title + ".txt"):
-                file = codecs.open(os.getcwd() + "\\..\\books\\" + book_title + ".txt", 'r', 'utf-8')
-                file_data = file.read()
-                file.seek(0)
-                for line in file.readlines():
-                    if line.startswith('$$$'):
-                        chapter_id = str_mid(line, '$$$[章节链接:http://www.hbooker.com/chapter/', ']$$$')
-                        print("尝试修复章节:", "chapter_id:", chapter_id)
-                        before_str = nl + '$$$[章节链接:http://www.hbooker.com/chapter/' + chapter_id + ']$$$' + nl
-                        content = get_content(chapter_id)
-                        fixed_chapter.append((before_str, content))
-                        if content.find('$$$') == -1:
-                            cnt_success += 1
-                        else:
-                            cnt_fail += 1
+            file = None
+            book_dir = os.getcwd() + "\\..\\books\\" + book_title
+            html_head = '<html>' + nl + '<head><title>' + book_title + '</title></head>' + nl + '<body>' + nl
+            html_end = '</body>' + nl + '</html>' + nl
+            if not os.path.isdir(book_dir):
+                os.makedirs(book_dir)
+            if os.path.isfile(book_dir + "\\" + book_title + ".html"):
+                file = codecs.open(book_dir + "\\" + book_title + ".html", 'r', 'utf-8')
+                file_lines = file.readlines()
                 file.close()
-            file = codecs.open(os.getcwd() + "\\..\\books\\" + book_title + ".txt", 'w', 'utf-8')
-            for fix in fixed_chapter:
-                file_data.replace(fix[0], fix[1])
-            file.write(file_data)
-            file.flush()
-            if len(fixed_chapter):
-                print("章节修复完成，修复成功", cnt_success, "章，修复失败", cnt_fail, "章")
+                file = codecs.open(book_dir + "\\" + book_title + ".html", 'w', 'utf-8')
+                for i in range(len(file_lines)):
+                    if file_lines[i].startswith('<a href='):
+                        chapter_id = str_mid(file_lines[i], '<a href="http://www.hbooker.com/chapter/', '">章节链接</a>')
+                        print("尝试修复章节:", "chapter_id:", chapter_id, end="  ----  ")
+                        file_lines[i] = download_image(get_content(chapter_id), book_dir) + nl
+                        file.seek(0)
+                        file.writelines(file_lines)
+                        file.flush()
+                        if file_lines[i].startswith('<a href='):
+                            cnt_fail += 1
+                            print("修复失败")
+                        else:
+                            cnt_success += 1
+                            print("修复成功")
+                    file_data += file_lines[i]
+                if cnt_success or cnt_fail:
+                    print("章节修复完成，修复成功", cnt_success, "章，修复失败", cnt_fail, "章")
+            else:
+                file = codecs.open(book_dir + "\\" + book_title + ".html", 'w', 'utf-8')
         except Exception as e:
             print("[ERROR]", e)
             print("检查文件时出错")
             continue
         try:
             while True:
-                chapter_start = input("输入开始章节编号(留空将自动寻找):") or 0
-                chapter_end = input("输入结束章节编号(留空将自动寻找):") or book_chapter_index
+                while True:
+                    try:
+                        chapter_start = int(input("输入开始章节编号(留空将自动寻找):") or 0)
+                        chapter_end = int(input("输入结束章节编号(留空将自动寻找):") or book_chapter_index)
+                        break
+                    except ValueError:
+                        continue
                 if chapter_start == 0:
-                    if file_data.rfind('No.') > -1:
-                        try:
-                            chapter_start = int(str_mid(file_data, 'No.', '  ', file_data.rfind('No.'))) + 1
-                            if int(chapter_start) > int(chapter_end):
-                                confirm = 'q'
-                                print("书籍暂无更新")
-                                break
-                        except ValueError:
-                            chapter_start = 1
-                            print("未能识别最新章节编号，将从章节编号1开始")
-                    else:
-                        chapter_start = 1
-                        print("未能识别最新章节编号，将从章节编号1开始")
-                try:
-                    if int(chapter_start) <= int(chapter_end):
-                        print("开始章节编号:", book_chapter[int(chapter_start) - 1][0],
-                              "chapter_id:", book_chapter[int(chapter_start) - 1][1],
-                              "标题:", book_chapter[int(chapter_start) - 1][2])
-                        print("结束章节编号:", book_chapter[int(chapter_end) - 1][0],
-                              "chapter_id:", book_chapter[int(chapter_end) - 1][1],
-                              "标题:", book_chapter[int(chapter_end) - 1][2])
-                        while True:
-                            confirm = input("确定从这个位置下载吗(y/n/q):")
-                            if confirm.lower().startswith('y') or confirm.lower().startswith('n') or confirm.lower().startswith('q'):
-                                break
-                        if confirm.lower().startswith('y') or confirm.lower().startswith('q'):
+                    for line in file_lines:
+                        if line.startswith('<div id='):
+                            try:
+                                if chapter_start < int(str_mid(line, '<div id="', '"')) + 1:
+                                    chapter_start = int(str_mid(line, '<div id="', '"')) + 1
+                            except ValueError:
+                                continue
+                    if chapter_start > chapter_end:
+                        confirm = 'q'
+                        input("书籍暂无更新")
+                        break
+                if chapter_start == 0:
+                    chapter_start = 1
+                    print("未能识别最新章节编号，将从章节编号1开始")
+                if chapter_start <= chapter_end:
+                    print("开始章节编号:", book_chapter[chapter_start - 1][0],
+                          "chapter_id:", book_chapter[chapter_start - 1][1],
+                          "标题:", book_chapter[chapter_start - 1][2])
+                    print("结束章节编号:", book_chapter[chapter_end - 1][0],
+                          "chapter_id:", book_chapter[chapter_end - 1][1],
+                          "标题:", book_chapter[chapter_end - 1][2])
+                    while True:
+                        confirm = input("确定从这个位置下载吗(y/n/q):").lower()
+                        if confirm.startswith('y') or confirm.startswith('n') or confirm.startswith('q'):
                             break
-                except ValueError:
-                    continue
-            if confirm.lower().startswith('q'):
+                    if confirm.startswith('y') or confirm.startswith('q'):
+                        break
+            if confirm.startswith('q'):
                 continue
         except Exception as e:
             print("[ERROR]", e)
@@ -289,22 +328,41 @@ if nickname:
             continue
         try:
             print("正在下载书籍内容...")
-            for chapter_index in range(int(chapter_start) - 1, int(chapter_end)):
+            file_data = file_data.replace(html_end, '')
+            file.seek(0)
+            file.write(file_data)
+            file.flush()
+            cnt_success = 0
+            cnt_fail = 0
+            for chapter_index in range(chapter_start - 1, chapter_end):
                 chapter_id = book_chapter[chapter_index][1]
                 title = book_chapter[chapter_index][2]
                 print("章节编号:", book_chapter[chapter_index][0],
                       "chapter_id:", chapter_id,
-                      "标题:", title)
-                content = get_content(chapter_id)
-                if content.find('$$$') == -1:
-                    cnt_success += 1
-                else:
-                    cnt_fail += 1
-                chapter_data = nl + 'No.' + str(chapter_index + 1) + '  ' + title + nl + content
+                      "标题:", title, end="  ----  ")
+                content = download_image(get_content(chapter_id), book_dir)
+                chapter_data = '<div id="' + str(chapter_index + 1) + '">' + nl + \
+                               '<h3>' + title + '</h3>' + nl + \
+                               content + nl + '<br><br>' + nl + \
+                               '</div>' + nl
+                file_data += chapter_data
                 file.write(chapter_data)
                 file.flush()
+                if content.startswith('<a href='):
+                    cnt_fail += 1
+                    print("下载失败")
+                else:
+                    cnt_success += 1
+                    print("下载成功")
+            file_data += html_end
+            file.write(html_end)
             file.close()
-            print("小说下载已完成，下载成功", cnt_success, "章，下载失败", cnt_fail, "章")
+            file_txt = codecs.open(book_dir + "\\" + book_title + ".txt", 'w', 'utf-8')
+            file_txt.seek(0)
+            file_txt.write(html2txt(file_data))
+            file_txt.close()
+            print("下载书籍已完成，下载成功", cnt_success, "章，下载失败", cnt_fail, "章")
+            input("按下回车键继续...")
         except Exception as e:
             print("[ERROR]", e)
             print("下载书籍时出错")
