@@ -65,8 +65,8 @@ def decrypt(_chapter_content: str, _encryt_keys: str, _chapter_access_key: str):
     _chapter_content = _chapter_content.replace('\\', '')
     return str(Decrypt_js.call('decrypt', _chapter_content, _encryt_keys, _chapter_access_key))
 
-print("下载的书籍文件在/../books目录下。")
-print("书籍文件有html和txt格式，使用html格式可加载图片，但确保images文件夹存在。")
+print("下载的书籍文件在 ../books 目录下。")
+print("书籍文件有html和txt格式，使用html格式可加载图片，但确保图片文件存在。")
 print("请先登录你的欢乐书客帐号，之后得到一些Cookies并输入程序。")
 print("若不登录则直接留空所有Cookies。")
 
