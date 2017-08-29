@@ -341,6 +341,9 @@ if nickname:
                 file.seek(0)
                 file.writelines(file_lines)
                 file.flush()
+                with codecs.open(book_dir + "\\" + book_title + ".txt", 'w', 'utf-8') as file_txt:
+                    file_txt.seek(0)
+                    file_txt.write(html2txt(file_data))
                 if cnt_success or cnt_fail:
                     print("章节修复完成，修复成功", cnt_success, "章，修复失败", cnt_fail, "章")
             else:
@@ -434,10 +437,9 @@ if nickname:
             file_data += html_end
             file.write(html_end)
             file.close()
-            file_txt = codecs.open(book_dir + "\\" + book_title + ".txt", 'w', 'utf-8')
-            file_txt.seek(0)
-            file_txt.write(html2txt(file_data))
-            file_txt.close()
+            with codecs.open(book_dir + "\\" + book_title + ".txt", 'w', 'utf-8') as file_txt:
+                file_txt.seek(0)
+                file_txt.write(html2txt(file_data))
             print("下载书籍已完成，下载成功", cnt_success, "章，下载失败", cnt_fail, "章")
             input("按下回车键继续...")
         except Exception as e:
