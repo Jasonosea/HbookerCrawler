@@ -2,8 +2,8 @@ import urllib.request
 import http.cookiejar
 import re
 import os
-import execjs
 import codecs
+import execjs
 
 print("当前JavaScript环境:", execjs.get().name)
 if str(execjs.get().name).lower().find('node.js') == -1:
@@ -34,7 +34,7 @@ headers_book_chapter_image = [('Accept', 'image/webp,image/*,*/*;q=0.8'),
                               ('Referer', 'http://www.hbooker.com/chapter/book_chapter_detail')]
 nl = '\r\n'
 doc_help = "下载的书籍文件及配置文件在 ../books 目录下。" + nl + \
-           "书籍文件有html和txt格式，使用html格式可加载图片，但确保图片文件存在。" + nl + \
+           "支持导出文件格式: txt,html,epub(未完成)" + nl + \
            "图片章节可通过修改配置文件中的area_width,font,font_size,bg_color_name,text_color_name实现不同文字效果" + nl + \
            "area_width:图片宽度; 默认:816" + nl + \
            "font:字体; 默认:undefined" + nl + \
