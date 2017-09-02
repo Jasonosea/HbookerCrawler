@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="2.0">
+<metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
+<dc:identifier id="BookId">hbooker:${book_id}</dc:identifier>
+<dc:title>${book_title}</dc:title>
+<dc:creator opf:role="aut">${book_author}</dc:creator>
+<dc:language>zh-CN</dc:language>
+<dc:publisher>hbooker.com</dc:publisher>
+<meta name="cover" content="cover.jpg"/>
+</metadata>
+<manifest>
+<item href="toc.ncx" id="ncx" media-type="application/x-dtbncx+xml" />
+<item href="Images/cover.jpg" id="cover.jpg" media-type="image/jpeg" />
+<item href="Text/cover.xhtml" id="cover.xhtml" media-type="application/xhtml+xml" />
+${chapter_format_manifest}={<item href="Text/${chapter_id}.xhtml" id="${chapter_id}.xhtml" media-type="application/xhtml+xml" />}
+</manifest>
+<spine toc="ncx">
+<itemref idref="cover.xhtml" />
+${chapter_format_spine}={<itemref idref="${chapter_id}.xhtml" />}
+</spine>
+<guide>
+<reference href="Text/cover.xhtml" title="书籍封面" type="cover" />
+</guide>
+</package>

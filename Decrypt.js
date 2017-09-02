@@ -77,8 +77,8 @@ var CryptoJS = require("crypto-js");
     }
 
 
-function decrypt(content,encryt_keys,accessKey){
-	var s={content:content,keys:encryt_keys.split(","),accessKey:accessKey};
+function decrypt(a,b,c){
+	var s={content:a,keys:b.split(","),accessKey:c};
 	var n=s.content;
 	var r=s.keys;
 	var t=s.keys.length;
