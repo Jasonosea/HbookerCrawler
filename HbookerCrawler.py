@@ -66,8 +66,6 @@ Decrypt_js = execjs.compile(open(os.getcwd() + '/Decrypt.js').read())
 
 
 def decrypt(_str: str, _encryt_keys: str, _access_key: str):
-    _encryt_keys = _encryt_keys.replace('"', '').replace('\\', '')
-    _str = _str.replace('\\', '')
     return str(Decrypt_js.call('decrypt', _str, _encryt_keys, _access_key))
 
 print("请先登录你的欢乐书客帐号，之后得到一些Cookies并输入程序。")
@@ -149,14 +147,14 @@ def get_content(_chapter_id: str):
                 _encryt_keys = str_mid(get_book_chapter_detail_info_str, '"encryt_keys":[', ']')
                 _chapter_content = str_mid(get_book_chapter_detail_info_str, '"chapter_content":"', '"')
                 _content = decrypt(_chapter_content, _encryt_keys, _chapter_access_key)
-                _content = re.sub("<p.+?>", '<p>', content)
+                _content = _content.replace("<p class='chapter'>", '<p>')
             elif _code == "400002":
                 try:
                     ajax_get_image_session_code_str = bytes(opener_chapter.open(
                         "http://www.hbooker.com/chapter/ajax_get_image_session_code", b'\n'
                     ).read()).decode('unicode_escape')
-                    code = str_mid(ajax_get_image_session_code_str, '"code":', ',')
-                    if code == "100000":
+                    _code = str_mid(ajax_get_image_session_code_str, '"code":', ',')
+                    if _code == "100000":
                         _encryt_keys = str_mid(ajax_get_image_session_code_str, '"encryt_keys":[', ']')
                         _access_key = str_mid(ajax_get_image_session_code_str, '"access_key":"', '"')
                         _image_code = str_mid(ajax_get_image_session_code_str, '"image_code":"', '"')
@@ -201,7 +199,7 @@ def get_images(_content: str):
             if src.rfind('/') == -1:
                 continue
             filename = src[src.rfind('/') + 1:]
-            _images.append((filename, urllib.request.urlopen(src).read()))
+            _images.append((filename, src))
         except Exception as _e:
             print("[ERROR]", _e)
             print("下载图片时出错")
@@ -217,6 +215,7 @@ if login_token and reader_id:
     except Exception as e:
         print("[ERROR]", e)
         print("获取书架信息时出错，取消登录")
+        input("按下回车键继续...")
         nickname = '${NoName}'
 else:
     nickname = '${NoName}'
@@ -236,6 +235,7 @@ if nickname:
         except Exception as e:
             print("[ERROR]", e)
             print("获取书架信息时出错，取消登录")
+            input("按下回车键继续...")
             nickname = '${NoName}'
         del bookshelf_str
     while True:
@@ -247,8 +247,8 @@ if nickname:
                 if not book_id:
                     continue
                 if book_id.startswith('q'):
-                    break
-                if book_id.startswith('h'):
+                    exit()
+                elif book_id.startswith('h'):
                     print(doc_help)
                 try:
                     if 0 < int(book_id) <= book_index:
@@ -259,12 +259,12 @@ if nickname:
         else:
             while True:
                 book_id = input("输入书籍id(输入q:退出,h:帮助):").lower()
-                if book_id.startswith('h'):
+                if book_id.startswith('q'):
+                    exit()
+                elif book_id.startswith('h'):
                     print(doc_help)
                 elif book_id:
                     break
-        if book_id.startswith('q'):
-            break
         try:
             print("正在获取书籍信息...")
             book_chapter_str = bytes(opener.open("http://www.hbooker.com/book/" + book_id).read()).decode()
@@ -286,6 +286,7 @@ if nickname:
         except Exception as e:
             print("[ERROR]", e)
             print("获取书籍信息时出错")
+            input("按下回车键继续...")
             continue
         try:
             print("正在检查文件...")
@@ -294,7 +295,7 @@ if nickname:
             book_dir = os.getcwd() + "/../books/" + book_title
             book_file_cfg = None
             book_file_cfg_lines = list()
-            last_id = 1
+            last_id = 0
             fail_list = list()
             downloaded_list = list()
             if not os.path.isdir(book_dir):
@@ -307,8 +308,8 @@ if nickname:
                 book_file_cfg.close()
                 for line in book_file_cfg_lines:
                     if line.startswith('chapter_error='):
-                        for _i in str_mid(line, '{', '}').split(','):
-                            if int(_i) - 1 < 0 or int(_i) - 1 > len(book_chapter):
+                        for _i in str_mid(line, 'chapter_error={', '}').split(','):
+                            if not _i or int(_i) - 1 < 0 or int(_i) - 1 > len(book_chapter):
                                 continue
                             print("尝试修复章节:", "编号:", _i, "chapter_id:", book_chapter[int(_i) - 1][0], end="")
                             content = get_content(book_chapter[int(_i) - 1][0])
@@ -323,18 +324,22 @@ if nickname:
                                     for _image_info in get_images(content):
                                         epub_file.addimage(_image_info[0], _image_info[1])
                                     downloaded_list.append(_i)
-                                    last_id = max(last_id, _i)
+                                    last_id = max(last_id, int(_i))
                                     cnt_success += 1
                                     print("  ----  修复成功")
                             else:
                                 epub_file.fiximagechapter(
                                     book_chapter[int(_i) - 1][0], book_chapter[int(_i) - 1][1], content)
+                                downloaded_list.append(_i)
+                                last_id = max(last_id, int(_i))
                                 cnt_success += 1
                                 print("  ----  修复成功")
                     elif line.startswith('chapter_downloaded='):
-                        downloaded_list.extend(str_mid(line, '{', '}').split(','))
+                        _list = str_mid(line, 'chapter_downloaded={', '}').split(',')
+                        if len(_list) and _list[0]:
+                            downloaded_list.extend(_list)
                     elif line.startswith('chapter_last_id='):
-                        last_id = int(str_mid(line, '"', '"'))
+                        last_id = int(str_mid(line, 'chapter_last_id="', '"') or 0)
                 book_file_cfg = codecs.open(book_dir + "/" + book_title + ".cfg", 'w', 'utf-8')
                 book_file_cfg.write('chapter_error={' + ','.join(fail_list) + '}' + nl +
                                     'chapter_downloaded={' + ','.join(downloaded_list) + '}' + nl +
@@ -347,12 +352,13 @@ if nickname:
         except Exception as e:
             print("[ERROR]", e)
             print("检查文件时出错")
+            input("按下回车键继续...")
             continue
         try:
             while True:
                 while True:
                     try:
-                        chapter_start = int(input("输入开始章节编号(留空将自动寻找):") or last_id)
+                        chapter_start = int(input("输入开始章节编号(留空将自动寻找):") or last_id + 1)
                         chapter_end = int(input("输入结束章节编号(留空将自动寻找):") or book_chapter_index)
                         break
                     except ValueError:
@@ -385,10 +391,11 @@ if nickname:
         except Exception as e:
             print("[ERROR]", e)
             print("读取章节编号时出错")
+            input("按下回车键继续...")
             continue
         try:
             print("正在下载书籍内容...")
-            epub_file.setcover(urllib.request.urlopen(book_cover_url).read())
+            epub_file.setcover(book_cover_url)
             cnt_success = 0
             cnt_fail = 0
             content = ''
@@ -398,22 +405,27 @@ if nickname:
                 print("章节编号:", chapter_index + 1,
                       "chapter_id:", chapter_id,
                       "标题:", chapter_title, end="")
+                if downloaded_list.count(str(chapter_index + 1)) > 0:
+                    print("  ----  章节已下载，跳过该章节")
+                    continue
                 content = get_content(chapter_id)
                 if isinstance(content, str):
                     if content.startswith('<a href='):
-                        fail_list.append(chapter_index)
+                        fail_list.append(str(chapter_index + 1))
                         cnt_fail += 1
                         print("  ----  下载失败")
                     else:
-                        epub_file.addchapter(str(chapter_index), chapter_id, chapter_title, content)
+                        epub_file.addchapter(str(chapter_index + 1), chapter_id, chapter_title, content)
                         for _image_info in get_images(content):
                             epub_file.addimage(_image_info[0], _image_info[1])
-                        downloaded_list.append(chapter_index)
+                        downloaded_list.append(str(chapter_index + 1))
+                        last_id = max(last_id, chapter_index + 1)
                         cnt_success += 1
                         print("  ----  下载成功")
                 else:
-                    epub_file.addimagechapter(str(chapter_index), chapter_id, chapter_title, content)
-                    last_id = max(last_id, chapter_index)
+                    epub_file.addimagechapter(str(chapter_index + 1), chapter_id, chapter_title, content)
+                    downloaded_list.append(str(chapter_index + 1))
+                    last_id = max(last_id, chapter_index + 1)
                     cnt_success += 1
                     print("  ----  下载成功")
             epub_file.export()
@@ -426,15 +438,9 @@ if nickname:
             print("下载书籍已完成，下载成功", cnt_success, "章，下载失败", cnt_fail, "章")
             input("按下回车键继续...")
         except Exception as e:
-            while len(book_file_cfg_lines) < 3:
-                book_file_cfg_lines.append('')
-            book_file_cfg_lines[0] = 'chapter_error={' + ','.join(fail_list) + '}' + nl
-            book_file_cfg_lines[1] = 'chapter_downloaded={' + ','.join(downloaded_list) + '}' + nl
-            book_file_cfg_lines[2] = str(last_id) + nl
-            book_file_cfg = codecs.open(book_dir + "/" + book_title + ".cfg", 'w', 'utf-8')
-            book_file_cfg.writelines(book_file_cfg_lines)
-            book_file_cfg.close()
             print("[ERROR]", e)
             print("下载书籍时出错")
+            input("按下回车键继续...")
+
 else:
     print("获取书架信息失败")

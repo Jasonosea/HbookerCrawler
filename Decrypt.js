@@ -78,6 +78,8 @@ var CryptoJS = require("crypto-js");
 
 
 function decrypt(a,b,c){
+	a=a.replace(/\\/g, "");
+	b=b.replace(/\\/g, "").replace(/\"/g, "");
 	var s={content:a,keys:b.split(","),accessKey:c};
 	var n=s.content;
 	var r=s.keys;

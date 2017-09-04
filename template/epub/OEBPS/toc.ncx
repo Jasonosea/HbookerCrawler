@@ -15,6 +15,6 @@
 <text>${book_author}</text>
 </docAuthor>
 <navMap>
-${chapter_format_navMap}={<navPoint id="${chapter_id}" playOrder="${chapter_index}"><navLabel><text>${chapter_title}</text></navLabel><content src="Text/${chapter_id}.xhtml" /></navPoint>}
+${chapter_format_navMap}={{{<navPoint id="${chapter_id}" playOrder="${chapter_index}"><navLabel><text>${chapter_title}</text></navLabel><content src="Text/${chapter_id}.xhtml" /></navPoint>}}}
 </navMap>
 </ncx>

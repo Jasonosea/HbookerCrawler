@@ -12,11 +12,12 @@
 <item href="toc.ncx" id="ncx" media-type="application/x-dtbncx+xml" />
 <item href="Images/cover.jpg" id="cover.jpg" media-type="image/jpeg" />
 <item href="Text/cover.xhtml" id="cover.xhtml" media-type="application/xhtml+xml" />
-${chapter_format_manifest}={<item href="Text/${chapter_id}.xhtml" id="${chapter_id}.xhtml" media-type="application/xhtml+xml" />}
+${chapter_format_manifest}={{{<item href="Text/${chapter_id}.xhtml" id="${chapter_id}.xhtml" media-type="application/xhtml+xml" />}}}
+${image_format_manifest}={{{<item href="Images/${filename}" id="${filename}" media-type="${media_type}" />}}}
 </manifest>
 <spine toc="ncx">
 <itemref idref="cover.xhtml" />
-${chapter_format_spine}={<itemref idref="${chapter_id}.xhtml" />}
+${chapter_format_spine}={{{<itemref idref="${chapter_id}.xhtml" />}}}
 </spine>
 <guide>
 <reference href="Text/cover.xhtml" title="书籍封面" type="cover" />
