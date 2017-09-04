@@ -10,5 +10,5 @@
 
 ## 需求环境
 - Python3(测试环境Python3.6.2)
--- PyExecJS(测试环境PyExecJS1.4.0)
+- PyExecJS(测试环境PyExecJS1.4.0)
 - Node.js(测试环境Node.js(V8))
