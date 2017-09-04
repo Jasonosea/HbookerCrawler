@@ -65,26 +65,12 @@ class EpubFile:
                         self._content_opf_manifest = str_mid(self._content_opf, '<manifest>', '</manifest>')
                         self._content_opf_spine = str_mid(self._content_opf, '<spine toc="ncx">', '</spine>')
                         self._toc_ncx_navMap = str_mid(self._toc_ncx, '<navMap>', '</navMap>')
+                        _init = False
             except zipfile.BadZipFile:
-                for _name in _template.namelist():
-                    if _name.find('$') == -1:
-                        _template.extract(_name, self._tempdir)
-                self._content_opf = re.sub(r'\${.*?}={{{[\S\s]*?}}}[\r\n]*', '', self._content_opf)
-                self._toc_ncx = re.sub(r'\${.*?}={{{[\S\s]*?}}}[\r\n]*', '', self._toc_ncx)
-                self._content_opf_manifest = str_mid(self._content_opf, '<manifest>', '</manifest>')
-                self._content_opf_spine = str_mid(self._content_opf, '<spine toc="ncx">', '</spine>')
-                self._toc_ncx_navMap = str_mid(self._toc_ncx, '<navMap>', '</navMap>')
-                self._content_opf = self._content_opf.replace('${book_id}', book_id)
-                self._content_opf = self._content_opf.replace('${book_title}', book_title)
-                self._content_opf = self._content_opf.replace('${book_author}', book_author)
-                self._toc_ncx = self._toc_ncx.replace('${book_id}', book_id)
-                self._toc_ncx = self._toc_ncx.replace('${book_title}', book_title)
-                self._toc_ncx = self._toc_ncx.replace('${book_author}', book_author)
-                with codecs.open(self._tempdir + '/OEBPS/content.opf', 'w', 'utf-8') as _file:
-                    _file.write(self._content_opf)
-                with codecs.open(self._tempdir + '/OEBPS/toc.ncx', 'w', 'utf-8') as _file:
-                    _file.write(self._toc_ncx)
+                _init = True
         else:
+            _init = True
+        if _init:
             for _name in _template.namelist():
                 if _name.find('$') == -1:
                     _template.extract(_name, self._tempdir)
@@ -105,6 +91,51 @@ class EpubFile:
                 _file.write(self._toc_ncx)
         _template.close()
 
+    def _add_manifest_chapter(self, chapter_id: str):
+        if self._content_opf_manifest.find('id="' + chapter_id + '.xhtml"') == -1:
+            _before = self._content_opf_manifest
+            self._content_opf_manifest += self._chapter_format_manifest.replace('${chapter_id}', chapter_id) + nl
+            self._content_opf = self._content_opf.replace(
+                '<manifest>' + _before + '</manifest>',
+                '<manifest>' + self._content_opf_manifest + '</manifest>', 1)
+
+    def _add_manifest_image(self, filename: str):
+        if self._content_opf_manifest.find('id="' + filename + '"') == -1:
+            _before = self._content_opf_manifest
+            if filename.endswith('.png'):
+                _media_type = 'image/png'
+            else:
+                _media_type = 'image/jpeg'
+            self._content_opf_manifest += self._image_format_manifest.replace('${filename}', filename)\
+                                              .replace('${media_type}', _media_type) + nl
+            self._content_opf = self._content_opf.replace(
+                '<manifest>' + _before + '</manifest>',
+                '<manifest>' + self._content_opf_manifest + '</manifest>', 1)
+
+    def _add_spine(self, chapter_id: str):
+        if self._content_opf_spine.find('idref="' + chapter_id + '.xhtml"') == -1:
+            _before = self._content_opf_spine
+            self._content_opf_spine += self._chapter_format_spine.replace('${chapter_id}', chapter_id) + nl
+            self._content_opf = self._content_opf.replace(
+                '<spine toc="ncx">' + _before + '</spine>',
+                '<spine toc="ncx">' + self._content_opf_spine + '</spine>', 1)
+
+    def _add_navMap(self, chapter_index: str, chapter_id: str, chapter_title: str):
+        if self._toc_ncx_navMap.find('id="' + chapter_id) == -1:
+            _before = self._toc_ncx_navMap
+            self._toc_ncx_navMap += self._chapter_format_navMap.replace('${chapter_id}', chapter_id)\
+                                        .replace('${chapter_index}', chapter_index)\
+                                        .replace('${chapter_title}', chapter_title) + nl
+            self._toc_ncx = self._toc_ncx.replace(
+                '<navMap>' + _before + '</navMap>',
+                '<navMap>' + self._toc_ncx_navMap + '</navMap>', 1)
+
+    def _save(self):
+        with codecs.open(self._tempdir + '/OEBPS/content.opf', 'w', 'utf-8') as _file:
+            _file.write(self._content_opf)
+        with codecs.open(self._tempdir + '/OEBPS/toc.ncx', 'w', 'utf-8') as _file:
+            _file.write(self._toc_ncx)
+
     def setcover(self, url: str):
         urllib.request.urlretrieve(url, self._tempdir + '/OEBPS/Images/cover.jpg')
 
@@ -119,61 +150,22 @@ class EpubFile:
                 _filename = _src[_src.rfind('/') + 1:]
                 _data = _data.replace(_src, '../Images/' + _filename)
             _file.write(_data)
-        if self._content_opf_manifest.find('id="' + chapter_id + '.xhtml"') == -1:
-            _before = self._content_opf_manifest
-            self._content_opf_manifest += self._chapter_format_manifest.replace('${chapter_id}', chapter_id) + nl
-            self._content_opf = self._content_opf.replace(
-                '<manifest>' + _before + '</manifest>',
-                '<manifest>' + self._content_opf_manifest + '</manifest>', 1)
-        if self._content_opf_spine.find('idref="' + chapter_id + '.xhtml"') == -1:
-            _before = self._content_opf_spine
-            self._content_opf_spine += self._chapter_format_spine.replace('${chapter_id}', chapter_id) + nl
-            self._content_opf = self._content_opf.replace(
-                '<spine toc="ncx">' + _before + '</spine>',
-                '<spine toc="ncx">' + self._content_opf_spine + '</spine>', 1)
-        if self._toc_ncx_navMap.find('id="' + chapter_id) == -1:
-            _before = self._toc_ncx_navMap
-            self._toc_ncx_navMap += self._chapter_format_navMap.replace('${chapter_id}', chapter_id)\
-                                        .replace('${chapter_index}', chapter_index)\
-                                        .replace('${chapter_title}', chapter_title) + nl
-            self._toc_ncx = self._toc_ncx.replace(
-                '<navMap>' + _before + '</navMap>',
-                '<navMap>' + self._toc_ncx_navMap + '</navMap>', 1)
-        with codecs.open(self._tempdir + '/OEBPS/content.opf', 'w', 'utf-8') as _file:
-            _file.write(self._content_opf)
-        with codecs.open(self._tempdir + '/OEBPS/toc.ncx', 'w', 'utf-8') as _file:
-            _file.write(self._toc_ncx)
+        self._add_manifest_chapter(chapter_id)
+        self._add_spine(chapter_id)
+        self._add_navMap(chapter_index, chapter_id, chapter_title)
 
     def addimage(self, filename: str, url: str):
         urllib.request.urlretrieve(url, self._tempdir + '/OEBPS/Images/' + filename)
-        if self._content_opf_manifest.find('id="' + filename + '"') == -1:
-            _before = self._content_opf_manifest
-            if filename.endswith('.jpg'):
-                _media_type = 'image/jpeg'
-            elif filename.endswith('.png'):
-                _media_type = 'image/png'
-            self._content_opf_manifest += self._image_format_manifest.replace('${filename}', filename)\
-                                              .replace('${media_type}', _media_type) + nl
-            self._content_opf = self._content_opf.replace(
-                '<manifest>' + _before + '</manifest>',
-                '<manifest>' + self._content_opf_manifest + '</manifest>', 1)
         with codecs.open(self._tempdir + '/OEBPS/content.opf', 'w', 'utf-8') as _file:
             _file.write(self._content_opf)
+        self._add_manifest_image(filename)
 
     def addimagechapter(self, chapter_index: str, chapter_id: str, chapter_title: str, image: bytes):
         self.addchapter(chapter_index, chapter_id, chapter_title,
                         '<img src="../Images/' + chapter_id + '.png" alt=\'' + chapter_title + '\' />')
         with open(self._tempdir + '/OEBPS/Images/' + chapter_id + '.png', 'wb') as _file:
             _file.write(image)
-        if self._content_opf_manifest.find('id="' + chapter_id + '.png"') == -1:
-            _before = self._content_opf_manifest
-            self._content_opf_manifest += self._image_format_manifest.replace('${filename}', chapter_id + '.png')\
-                                              .replace('${media_type}', 'image/png') + nl
-            self._content_opf = self._content_opf.replace(
-                '<manifest>' + _before + '</manifest>',
-                '<manifest>' + self._content_opf_manifest + '</manifest>', 1)
-        with codecs.open(self._tempdir + '/OEBPS/content.opf', 'w', 'utf-8') as _file:
-            _file.write(self._content_opf)
+        self._add_manifest_image(chapter_id + '.png')
 
     def fixchapter(self, chapter_id: str, chapter_title: str, chapter_content: str):
         with codecs.open(self._tempdir + '/OEBPS/Text/' + chapter_id + '.xhtml', 'w', 'utf-8') as _file:
@@ -192,23 +184,17 @@ class EpubFile:
                         '<img src="../Images/' + chapter_id + '.png" alt=\'' + chapter_title + '\' />')
         with open(self._tempdir + '/OEBPS/Images/' + chapter_id + '.png', 'wb') as _file:
             _file.write(image)
-        if self._content_opf_manifest.find('id="' + chapter_id + '.png"') == -1:
-            _before = self._content_opf_manifest
-            self._content_opf_manifest += self._image_format_manifest.replace('${filename}', chapter_id + '.png')\
-                                              .replace('${media_type}', 'image/png') + nl
-            self._content_opf = self._content_opf.replace(
-                '<manifest>' + _before + '</manifest>',
-                '<manifest>' + self._content_opf_manifest + '</manifest>', 1)
-        with codecs.open(self._tempdir + '/OEBPS/content.opf', 'w', 'utf-8') as _file:
-            _file.write(self._content_opf)
+        self._add_manifest_image(chapter_id + '.png')
 
     def export(self):
+        self._save()
         with zipfile.ZipFile(self._filepath, 'w', zipfile.ZIP_DEFLATED) as _file:
             _result = getallfiles(self._tempdir)
             for _name in _result:
                 _file.write(_name, _name.replace(self._tempdir + '/', ''))
 
     def export_txt(self):
+        self._save()
         with codecs.open(self._filepath.replace('.epub', '.txt'), 'w', 'utf-8') as _file:
             for _name in sorted(os.listdir(self._tempdir + '/OEBPS/Text')):
                 if _name.find('$') > -1 or _name == 'cover.xhtml':
@@ -224,4 +210,3 @@ class EpubFile:
                 _data_chapter = re.sub(r'</?[\S\s]*?>', '', _data_chapter)
                 _data_chapter = re.sub(r'[\r\n]+', nl * 2, _data_chapter)
                 _file.write(_data_chapter + nl)
-                _file.flush()
