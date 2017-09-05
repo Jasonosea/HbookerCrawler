@@ -302,9 +302,8 @@ if nickname:
             epub_file = Epub.EpubFile(book_dir + "/" + book_title + ".epub", book_dir + "/cache",
                                       book_id, book_title, book_author)
             if os.path.isfile(book_dir + "/" + book_title + ".cfg"):
-                book_file_cfg = codecs.open(book_dir + "/" + book_title + ".cfg", 'r', 'utf-8')
-                book_file_cfg_lines = book_file_cfg.readlines()
-                book_file_cfg.close()
+                with codecs.open(book_dir + "/" + book_title + ".cfg", 'r', 'utf-8') as book_file_cfg:
+                    book_file_cfg_lines = book_file_cfg.readlines()
                 for line in book_file_cfg_lines:
                     if line.startswith('chapter_error='):
                         for _i in str_mid(line, 'chapter_error={', '}').split(','):
@@ -333,17 +332,20 @@ if nickname:
                                 last_id = max(last_id, int(_i))
                                 cnt_success += 1
                                 print("  ----  修复成功")
+                            with codecs.open(book_dir + "/" + book_title + ".cfg", 'w', 'utf-8') as book_file_cfg:
+                                book_file_cfg.write('chapter_error={' + ','.join(fail_list) + '}' + nl +
+                                                    'chapter_downloaded={' + ','.join(downloaded_list) + '}' + nl +
+                                                    'chapter_last_id="' + str(last_id) + '"')
                     elif line.startswith('chapter_downloaded='):
                         _list = str_mid(line, 'chapter_downloaded={', '}').split(',')
                         if len(_list) and _list[0]:
                             downloaded_list.extend(_list)
                     elif line.startswith('chapter_last_id='):
                         last_id = int(str_mid(line, 'chapter_last_id="', '"') or 0)
-                book_file_cfg = codecs.open(book_dir + "/" + book_title + ".cfg", 'w', 'utf-8')
-                book_file_cfg.write('chapter_error={' + ','.join(fail_list) + '}' + nl +
-                                    'chapter_downloaded={' + ','.join(downloaded_list) + '}' + nl +
-                                    'chapter_last_id="' + str(last_id) + '"' + nl)
-                book_file_cfg.close()
+                with codecs.open(book_dir + "/" + book_title + ".cfg", 'w', 'utf-8') as book_file_cfg:
+                    book_file_cfg.write('chapter_error={' + ','.join(fail_list) + '}' + nl +
+                                        'chapter_downloaded={' + ','.join(downloaded_list) + '}' + nl +
+                                        'chapter_last_id="' + str(last_id) + '"')
                 if cnt_success or cnt_fail:
                     epub_file.export()
                     epub_file.export_txt()
@@ -384,8 +386,6 @@ if nickname:
                 else:
                     print("输入无效:", "开始章节编号", chapter_start, "大于", "结束章节编号", chapter_end)
             if confirm.startswith('q'):
-                if book_file_cfg:
-                    book_file_cfg.close()
                 continue
         except Exception as e:
             print("[ERROR]", e)
@@ -427,13 +427,16 @@ if nickname:
                     last_id = max(last_id, chapter_index + 1)
                     cnt_success += 1
                     print("  ----  下载成功")
+                with codecs.open(book_dir + "/" + book_title + ".cfg", 'w', 'utf-8') as book_file_cfg:
+                    book_file_cfg.write('chapter_error={' + ','.join(fail_list) + '}' + nl +
+                                        'chapter_downloaded={' + ','.join(downloaded_list) + '}' + nl +
+                                        'chapter_last_id="' + str(last_id) + '"')
             epub_file.export()
             epub_file.export_txt()
-            book_file_cfg = codecs.open(book_dir + "/" + book_title + ".cfg", 'w', 'utf-8')
-            book_file_cfg.write('chapter_error={' + ','.join(fail_list) + '}' + nl +
-                                'chapter_downloaded={' + ','.join(downloaded_list) + '}' + nl +
-                                'chapter_last_id="' + str(last_id) + '"' + nl)
-            book_file_cfg.close()
+            with codecs.open(book_dir + "/" + book_title + ".cfg", 'w', 'utf-8') as book_file_cfg:
+                book_file_cfg.write('chapter_error={' + ','.join(fail_list) + '}' + nl +
+                                    'chapter_downloaded={' + ','.join(downloaded_list) + '}' + nl +
+                                    'chapter_last_id="' + str(last_id) + '"')
             print("下载书籍已完成，下载成功", cnt_success, "章，下载失败", cnt_fail, "章")
             input("按下回车键继续...")
         except Exception as e:

@@ -142,8 +142,9 @@ class EpubFile:
     def addchapter(self, chapter_index: str, chapter_id: str, chapter_title: str, chapter_content: str):
         with codecs.open(self._tempdir + '/OEBPS/Text/' + chapter_id + '.xhtml', 'w', 'utf-8') as _file:
             _data = self._chapter_format.replace('${chapter_title}', chapter_title)\
-                .replace('${chapter_content}', chapter_content)
+                .replace('${chapter_content}', '<h3>' + chapter_title + '</h3>' + nl + chapter_content)
             for _img in re.findall(r'<img src="http.*?>', _data):
+                _img = _img.replace('>', ' />')
                 _src = str_mid(_img, '<img src="', '"')
                 if _src.rfind('/') == -1:
                     continue
@@ -155,9 +156,13 @@ class EpubFile:
         self._add_navMap(chapter_index, chapter_id, chapter_title)
 
     def addimage(self, filename: str, url: str):
-        urllib.request.urlretrieve(url, self._tempdir + '/OEBPS/Images/' + filename)
-        with codecs.open(self._tempdir + '/OEBPS/content.opf', 'w', 'utf-8') as _file:
-            _file.write(self._content_opf)
+        try:
+            urllib.request.urlretrieve(url, self._tempdir + '/OEBPS/Images/' + filename)
+        except Exception as _e:
+            print("[ERROR]", _e)
+            print("下载插图时出现错误，已跳过")
+            with open(self._tempdir + '/OEBPS/Images/' + filename, 'wb') as _file:
+                pass
         self._add_manifest_image(filename)
 
     def addimagechapter(self, chapter_index: str, chapter_id: str, chapter_title: str, image: bytes):
@@ -172,6 +177,7 @@ class EpubFile:
             _data = self._chapter_format.replace('${chapter_title}', chapter_title)\
                 .replace('${chapter_content}', chapter_content)
             for _img in re.findall(r'<img src="http.*?>', _data):
+                _img = _img.replace('>', ' />')
                 _src = str_mid(_img, '<img src="', '"')
                 if _src.rfind('/') == -1:
                     continue
@@ -200,7 +206,7 @@ class EpubFile:
                 if _name.find('$') > -1 or _name == 'cover.xhtml':
                     continue
                 with codecs.open(self._tempdir + '/OEBPS/Text/' + _name, 'r', 'utf-8') as _file_xhtml:
-                    _data_chapter = str(_file_xhtml.read())
+                    _data_chapter = re.sub(r'<h3>.*?</h3>', '', str(_file_xhtml.read()))
                 for _a in re.findall(r'<a href=.*?>章节链接</a>', _data_chapter):
                     _data_chapter = _data_chapter.replace(_a, '章节链接:' + str_mid(_a, '<a href="', '"'))
                 for _img in re.findall(r'<img src=.*?>', _data_chapter):
